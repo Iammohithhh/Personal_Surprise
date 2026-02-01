@@ -5,7 +5,7 @@ Create beautiful, interactive romantic surprises for your loved ones. Transform 
 ## Features
 
 - **Memory Collection**: Upload photos, write notes, add dates and locations for your special moments together
-- **AI-Powered Storytelling**: Your memories are transformed into beautifully crafted narrative chapters (optional - works with or without OpenAI API)
+- **AI-Powered Storytelling**: Your memories are transformed into beautifully crafted narrative chapters (supports Groq FREE API or OpenAI)
 - **Immersive Experience**: Recipients experience the story with:
   - Paced reveals (no skipping!)
   - Typing animations for emotional impact
@@ -44,10 +44,13 @@ cd Personal_Surprise
 npm install
 ```
 
-3. (Optional) Set up OpenAI for AI-powered storytelling:
+3. Set up AI for story generation (Groq is FREE!):
 ```bash
 cp .env.example .env.local
-# Add your OpenAI API key to .env.local
+```
+Then get your FREE Groq API key at https://console.groq.com/keys and add it to `.env.local`:
+```
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
 4. Start the development server:
@@ -73,14 +76,17 @@ npm run dev
 - **Styling**: Tailwind CSS v4
 - **Animations**: Framer Motion
 - **State Management**: Zustand
-- **AI**: OpenAI GPT-4o-mini (optional)
+- **AI**: Groq Llama 3.3 70B (FREE!) or OpenAI GPT-4o-mini
 - **Icons**: Lucide React
 
 ## Environment Variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `OPENAI_API_KEY` | OpenAI API key for AI-powered narratives | No (fallback narratives provided) |
+| `GROQ_API_KEY` | Groq API key for AI narratives (FREE!) | No* |
+| `OPENAI_API_KEY` | OpenAI API key (paid alternative) | No* |
+
+*At least one AI key recommended for best experience. Without any key, beautiful fallback narratives are used.
 
 ## Project Structure
 
