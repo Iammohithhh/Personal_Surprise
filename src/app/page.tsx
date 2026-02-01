@@ -5,6 +5,7 @@ import Landing from '@/components/Landing';
 import CreateStory from '@/components/CreateStory';
 import Preview from '@/components/Preview';
 import Experience from '@/components/Experience';
+import Dashboard from '@/components/Dashboard';
 
 export default function Home() {
   const { viewMode } = useStore();
@@ -15,6 +16,7 @@ export default function Home() {
       {viewMode === 'create' && <CreateStory />}
       {viewMode === 'preview' && <Preview />}
       {viewMode === 'experience' && <Experience />}
+      {viewMode === 'dashboard' && <Dashboard />}
     </main>
   );
 }

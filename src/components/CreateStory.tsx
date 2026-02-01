@@ -13,29 +13,82 @@ import {
   Heart,
   Sparkles,
   Trash2,
-  ChevronDown,
+  FileText,
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import HeartIcon from './HeartIcon';
-import { Memory, LoveStory } from '@/types';
+import { Memory, Story, Occasion, RecipientType } from '@/types';
+
+const recipientTypes = [
+  { value: 'partner', label: 'Partner / Spouse', emoji: '💕' },
+  { value: 'friend', label: 'Friend', emoji: '🤝' },
+  { value: 'family', label: 'Family Member', emoji: '👨‍👩‍👧‍👦' },
+  { value: 'parent', label: 'Parent', emoji: '👨‍👧' },
+  { value: 'sibling', label: 'Sibling', emoji: '👫' },
+  { value: 'grandparent', label: 'Grandparent', emoji: '👴👵' },
+  { value: 'colleague', label: 'Colleague', emoji: '💼' },
+  { value: 'other', label: 'Someone Special', emoji: '✨' },
+];
 
 const occasions = [
   { value: 'valentine', label: "Valentine's Day", emoji: '💕' },
-  { value: 'anniversary', label: 'Anniversary', emoji: '💍' },
   { value: 'birthday', label: 'Birthday', emoji: '🎂' },
+  { value: 'anniversary', label: 'Anniversary', emoji: '💍' },
   { value: 'wedding', label: 'Wedding', emoji: '💒' },
   { value: 'proposal', label: 'Proposal', emoji: '💎' },
-  { value: 'other', label: 'Other Special Day', emoji: '✨' },
+  { value: 'friendship', label: 'Friendship Day', emoji: '🤝' },
+  { value: 'graduation', label: 'Graduation', emoji: '🎓' },
+  { value: 'mothers_day', label: "Mother's Day", emoji: '👩‍👧' },
+  { value: 'fathers_day', label: "Father's Day", emoji: '👨‍👧' },
+  { value: 'thank_you', label: 'Thank You', emoji: '🙏' },
+  { value: 'congratulations', label: 'Congratulations', emoji: '🎉' },
+  { value: 'get_well', label: 'Get Well Soon', emoji: '💐' },
+  { value: 'new_year', label: 'New Year', emoji: '🎊' },
+  { value: 'just_because', label: 'Just Because', emoji: '💝' },
+  { value: 'other', label: 'Other', emoji: '✨' },
 ];
+
+const messageSuggestions: Record<string, string[]> = {
+  partner: [
+    'Will you be my Valentine?',
+    'I love you more every day',
+    'Will you marry me?',
+    "Here's to forever with you",
+  ],
+  friend: [
+    "Thank you for being you",
+    "You're the best friend anyone could ask for",
+    "Here's to our friendship",
+    "I'm so grateful for you",
+  ],
+  family: [
+    'Thank you for everything',
+    "I'm so lucky to have you",
+    'You mean the world to me',
+    'Family forever',
+  ],
+  parent: [
+    'Thank you for everything you do',
+    "I couldn't have done it without you",
+    'You inspire me every day',
+    'I love you, always',
+  ],
+  default: [
+    'Thank you for being in my life',
+    'You are truly special',
+    "Here's to many more memories",
+    'With love and gratitude',
+  ],
+};
 
 export default function CreateStory() {
   const {
     currentStory,
-    setPartnerName,
-    setYourName,
+    setRecipientName,
+    setCreatorName,
+    setRecipientType,
     setOccasion,
     addMemory,
-    updateMemory,
     removeMemory,
     setFinalMessage,
     setViewMode,
@@ -60,8 +113,13 @@ export default function CreateStory() {
     }
   }, []);
 
+  // Memory is valid if it has at least a photo OR a note
+  const isMemoryValid = () => {
+    return newMemory.photo || newMemory.note;
+  };
+
   const handleAddMemory = () => {
-    if (newMemory.note) {
+    if (isMemoryValid()) {
       addMemory({
         note: newMemory.note,
         photo: newMemory.photo,
@@ -70,6 +128,9 @@ export default function CreateStory() {
       });
       setNewMemory({});
       setShowAddMemory(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -81,8 +142,9 @@ export default function CreateStory() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          partnerName: currentStory.partnerName,
-          yourName: currentStory.yourName,
+          recipientName: currentStory.recipientName,
+          creatorName: currentStory.creatorName,
+          recipientType: currentStory.recipientType,
           occasion: currentStory.occasion,
           customOccasion: currentStory.customOccasion,
           memories: currentStory.memories,
@@ -93,26 +155,29 @@ export default function CreateStory() {
       if (!response.ok) throw new Error('Failed to generate story');
 
       const story = await response.json();
-      setGeneratedStory(story as LoveStory);
+      setGeneratedStory(story as Story);
       setViewMode('preview');
     } catch (error) {
       console.error('Error generating story:', error);
       // For demo, create a mock story
-      const mockStory: LoveStory = {
+      const mockStory: Story = {
         id: Date.now().toString(),
-        partnerName: currentStory.partnerName || 'My Love',
-        yourName: currentStory.yourName || 'Me',
-        occasion: currentStory.occasion || 'valentine',
+        recipientName: currentStory.recipientName || 'Someone Special',
+        creatorName: currentStory.creatorName || 'Me',
+        recipientType: currentStory.recipientType || 'friend',
+        occasion: currentStory.occasion || 'just_because',
         memories: currentStory.memories || [],
         chapters: (currentStory.memories || []).map((memory, index) => ({
           id: `chapter-${index}`,
           title: `Chapter ${index + 1}`,
-          narrative: `There's something magical about the way we met, the way we grew, the way we loved. ${memory.note}`,
+          narrative: memory.note
+            ? `There's something magical about this moment. ${memory.note}`
+            : 'A picture is worth a thousand words, and this one speaks volumes about how much you mean to me.',
           memory,
           innerMonologue: "In that moment, I knew you were someone special. Someone I wanted to keep in my life forever.",
-          atmosphere: memory.location || "somewhere that would become our special place",
+          atmosphere: memory.location || "a place that holds special meaning",
         })),
-        finalMessage: currentStory.finalMessage || "Will you be my Valentine?",
+        finalMessage: currentStory.finalMessage || "Thank you for being you",
         createdAt: new Date(),
       };
       setGeneratedStory(mockStory);
@@ -125,7 +190,7 @@ export default function CreateStory() {
   const canProceed = () => {
     switch (step) {
       case 1:
-        return currentStory.partnerName && currentStory.yourName;
+        return currentStory.recipientName && currentStory.creatorName && currentStory.recipientType;
       case 2:
         return currentStory.occasion;
       case 3:
@@ -135,6 +200,11 @@ export default function CreateStory() {
       default:
         return false;
     }
+  };
+
+  const getSuggestions = () => {
+    const type = currentStory.recipientType || 'default';
+    return messageSuggestions[type] || messageSuggestions.default;
   };
 
   const totalSteps = 4;
@@ -157,7 +227,7 @@ export default function CreateStory() {
           <div className="flex items-center gap-2">
             <HeartIcon size={24} color="#C44569" />
             <span
-              className="text-lg"
+              className="text-lg hidden sm:inline"
               style={{ fontFamily: 'var(--font-script)', color: 'var(--rose-primary)' }}
             >
               Creating Magic
@@ -187,7 +257,7 @@ export default function CreateStory() {
       <main className="pt-24 pb-32 px-6">
         <div className="max-w-2xl mx-auto">
           <AnimatePresence mode="wait">
-            {/* Step 1: Names */}
+            {/* Step 1: Who */}
             {step === 1 && (
               <motion.div
                 key="step1"
@@ -196,33 +266,73 @@ export default function CreateStory() {
                 exit={{ opacity: 0, x: -50 }}
                 transition={{ duration: 0.4 }}
               >
-                <div className="text-center mb-12">
+                <div className="text-center mb-8">
                   <h2
-                    className="text-4xl font-semibold mb-4"
+                    className="text-3xl sm:text-4xl font-semibold mb-4"
                     style={{ fontFamily: 'var(--font-display)', color: 'var(--night-deep)' }}
                   >
-                    Who is this story for?
+                    Who is this surprise for?
                   </h2>
                   <p
                     className="text-lg opacity-70"
                     style={{ fontFamily: 'var(--font-body)' }}
                   >
-                    Let&apos;s personalize this beautiful journey
+                    Let&apos;s personalize this experience
                   </p>
                 </div>
 
                 <div className="space-y-6">
+                  {/* Recipient Type */}
+                  <div>
+                    <label
+                      className="block text-sm mb-3 opacity-70"
+                      style={{ fontFamily: 'var(--font-display)' }}
+                    >
+                      Who are they to you?
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {recipientTypes.map((type) => (
+                        <motion.button
+                          key={type.value}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setRecipientType(type.value as RecipientType)}
+                          className={`p-3 rounded-xl text-center transition-all ${
+                            currentStory.recipientType === type.value
+                              ? 'ring-2 ring-rose-primary'
+                              : 'card-romantic'
+                          }`}
+                          style={{
+                            background:
+                              currentStory.recipientType === type.value
+                                ? 'linear-gradient(135deg, #FDF2F0 0%, #FADBD8 100%)'
+                                : 'white',
+                          }}
+                        >
+                          <span className="text-2xl block mb-1">{type.emoji}</span>
+                          <span
+                            className="text-xs"
+                            style={{ fontFamily: 'var(--font-body)', color: 'var(--night-deep)' }}
+                          >
+                            {type.label}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Names */}
                   <div>
                     <label
                       className="block text-sm mb-2 opacity-70"
                       style={{ fontFamily: 'var(--font-display)' }}
                     >
-                      Your partner&apos;s name
+                      Their name
                     </label>
                     <input
                       type="text"
-                      value={currentStory.partnerName || ''}
-                      onChange={(e) => setPartnerName(e.target.value)}
+                      value={currentStory.recipientName || ''}
+                      onChange={(e) => setRecipientName(e.target.value)}
                       placeholder="Enter their name..."
                       className="input-romantic"
                     />
@@ -241,8 +351,8 @@ export default function CreateStory() {
                     </label>
                     <input
                       type="text"
-                      value={currentStory.yourName || ''}
-                      onChange={(e) => setYourName(e.target.value)}
+                      value={currentStory.creatorName || ''}
+                      onChange={(e) => setCreatorName(e.target.value)}
                       placeholder="Enter your name..."
                       className="input-romantic"
                     />
@@ -260,9 +370,9 @@ export default function CreateStory() {
                 exit={{ opacity: 0, x: -50 }}
                 transition={{ duration: 0.4 }}
               >
-                <div className="text-center mb-12">
+                <div className="text-center mb-8">
                   <h2
-                    className="text-4xl font-semibold mb-4"
+                    className="text-3xl sm:text-4xl font-semibold mb-4"
                     style={{ fontFamily: 'var(--font-display)', color: 'var(--night-deep)' }}
                   >
                     What&apos;s the occasion?
@@ -275,14 +385,14 @@ export default function CreateStory() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {occasions.map((occ) => (
                     <motion.button
                       key={occ.value}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => setOccasion(occ.value as LoveStory['occasion'])}
-                      className={`p-6 rounded-2xl text-left transition-all ${
+                      onClick={() => setOccasion(occ.value as Occasion)}
+                      className={`p-4 rounded-xl text-left transition-all ${
                         currentStory.occasion === occ.value
                           ? 'ring-2 ring-rose-primary shadow-lg'
                           : 'card-romantic'
@@ -294,9 +404,9 @@ export default function CreateStory() {
                             : 'white',
                       }}
                     >
-                      <span className="text-3xl mb-3 block">{occ.emoji}</span>
+                      <span className="text-2xl mb-2 block">{occ.emoji}</span>
                       <span
-                        className="font-medium"
+                        className="text-sm font-medium"
                         style={{ fontFamily: 'var(--font-display)', color: 'var(--night-deep)' }}
                       >
                         {occ.label}
@@ -332,9 +442,9 @@ export default function CreateStory() {
                 exit={{ opacity: 0, x: -50 }}
                 transition={{ duration: 0.4 }}
               >
-                <div className="text-center mb-12">
+                <div className="text-center mb-8">
                   <h2
-                    className="text-4xl font-semibold mb-4"
+                    className="text-3xl sm:text-4xl font-semibold mb-4"
                     style={{ fontFamily: 'var(--font-display)', color: 'var(--night-deep)' }}
                   >
                     Add Your Memories
@@ -343,7 +453,13 @@ export default function CreateStory() {
                     className="text-lg opacity-70"
                     style={{ fontFamily: 'var(--font-body)' }}
                   >
-                    Each memory becomes a chapter in your love story
+                    Each memory becomes a chapter in your story
+                  </p>
+                  <p
+                    className="text-sm opacity-50 mt-2"
+                    style={{ fontFamily: 'var(--font-body)' }}
+                  >
+                    Add a photo, a note, or both - all fields are optional
                   </p>
                 </div>
 
@@ -358,19 +474,35 @@ export default function CreateStory() {
                         exit={{ opacity: 0, x: -100 }}
                         className="card-romantic p-4 flex gap-4"
                       >
-                        {memory.photo && (
+                        {memory.photo ? (
                           <div
                             className="w-20 h-20 rounded-xl bg-cover bg-center flex-shrink-0"
                             style={{ backgroundImage: `url(${memory.photo})` }}
                           />
+                        ) : (
+                          <div
+                            className="w-20 h-20 rounded-xl flex-shrink-0 flex items-center justify-center"
+                            style={{ background: 'var(--rose-cream)' }}
+                          >
+                            <FileText size={24} style={{ color: 'var(--rose-light)' }} />
+                          </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p
-                            className="text-sm mb-2 line-clamp-2"
-                            style={{ fontFamily: 'var(--font-body)' }}
-                          >
-                            {memory.note}
-                          </p>
+                          {memory.note ? (
+                            <p
+                              className="text-sm mb-2 line-clamp-2"
+                              style={{ fontFamily: 'var(--font-body)' }}
+                            >
+                              {memory.note}
+                            </p>
+                          ) : (
+                            <p
+                              className="text-sm mb-2 italic opacity-50"
+                              style={{ fontFamily: 'var(--font-body)' }}
+                            >
+                              Photo memory
+                            </p>
+                          )}
                           <div className="flex items-center gap-4 text-xs opacity-50">
                             {memory.date && (
                               <span className="flex items-center gap-1">
@@ -415,7 +547,10 @@ export default function CreateStory() {
                           New Memory
                         </h3>
                         <button
-                          onClick={() => setShowAddMemory(false)}
+                          onClick={() => {
+                            setShowAddMemory(false);
+                            setNewMemory({});
+                          }}
                           className="p-1 opacity-50 hover:opacity-100"
                         >
                           <X size={20} />
@@ -462,13 +597,21 @@ export default function CreateStory() {
                       </div>
 
                       {/* Note */}
-                      <textarea
-                        value={newMemory.note || ''}
-                        onChange={(e) => setNewMemory((prev) => ({ ...prev, note: e.target.value }))}
-                        placeholder="Write about this memory... What happened? How did it make you feel?"
-                        className="textarea-romantic"
-                        rows={4}
-                      />
+                      <div>
+                        <label
+                          className="block text-xs mb-1 opacity-50"
+                          style={{ fontFamily: 'var(--font-display)' }}
+                        >
+                          Write about this memory (optional)
+                        </label>
+                        <textarea
+                          value={newMemory.note || ''}
+                          onChange={(e) => setNewMemory((prev) => ({ ...prev, note: e.target.value }))}
+                          placeholder="What happened? How did it make you feel?"
+                          className="textarea-romantic"
+                          rows={3}
+                        />
+                      </div>
 
                       {/* Date and Location */}
                       <div className="grid grid-cols-2 gap-4">
@@ -477,7 +620,7 @@ export default function CreateStory() {
                             className="block text-xs mb-1 opacity-50"
                             style={{ fontFamily: 'var(--font-display)' }}
                           >
-                            When was this?
+                            When? (optional)
                           </label>
                           <input
                             type="text"
@@ -494,7 +637,7 @@ export default function CreateStory() {
                             className="block text-xs mb-1 opacity-50"
                             style={{ fontFamily: 'var(--font-display)' }}
                           >
-                            Where?
+                            Where? (optional)
                           </label>
                           <input
                             type="text"
@@ -510,11 +653,17 @@ export default function CreateStory() {
 
                       <button
                         onClick={handleAddMemory}
-                        disabled={!newMemory.note}
+                        disabled={!isMemoryValid()}
                         className="btn-romantic w-full disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Add Memory
                       </button>
+
+                      {!isMemoryValid() && (
+                        <p className="text-xs text-center opacity-50" style={{ fontFamily: 'var(--font-body)' }}>
+                          Add at least a photo or a note
+                        </p>
+                      )}
                     </motion.div>
                   ) : (
                     <motion.button
@@ -546,18 +695,18 @@ export default function CreateStory() {
                 exit={{ opacity: 0, x: -50 }}
                 transition={{ duration: 0.4 }}
               >
-                <div className="text-center mb-12">
+                <div className="text-center mb-8">
                   <h2
-                    className="text-4xl font-semibold mb-4"
+                    className="text-3xl sm:text-4xl font-semibold mb-4"
                     style={{ fontFamily: 'var(--font-display)', color: 'var(--night-deep)' }}
                   >
-                    The Big Question
+                    Your Final Message
                   </h2>
                   <p
                     className="text-lg opacity-70"
                     style={{ fontFamily: 'var(--font-body)' }}
                   >
-                    What do you want to ask at the end of the story?
+                    What do you want to say at the end?
                   </p>
                 </div>
 
@@ -565,8 +714,8 @@ export default function CreateStory() {
                   <textarea
                     value={currentStory.finalMessage || ''}
                     onChange={(e) => setFinalMessage(e.target.value)}
-                    placeholder="Will you be my Valentine?"
-                    className="textarea-romantic text-center text-2xl"
+                    placeholder="Write your message..."
+                    className="textarea-romantic text-center text-xl sm:text-2xl"
                     style={{ fontFamily: 'var(--font-script)', minHeight: '150px' }}
                     rows={3}
                   />
@@ -576,15 +725,10 @@ export default function CreateStory() {
                       className="text-sm opacity-50 mb-4"
                       style={{ fontFamily: 'var(--font-body)' }}
                     >
-                      Quick suggestions:
+                      Suggestions for {recipientTypes.find(r => r.value === currentStory.recipientType)?.label || 'your recipient'}:
                     </p>
                     <div className="flex flex-wrap justify-center gap-2">
-                      {[
-                        'Will you be my Valentine?',
-                        'Will you marry me?',
-                        'I love you, forever and always',
-                        "Here's to another year of us",
-                      ].map((suggestion) => (
+                      {getSuggestions().map((suggestion) => (
                         <button
                           key={suggestion}
                           onClick={() => setFinalMessage(suggestion)}
@@ -638,7 +782,7 @@ export default function CreateStory() {
               ) : (
                 <>
                   <Sparkles size={20} />
-                  Create My Love Story
+                  Create My Surprise Story
                   <Heart size={20} />
                 </>
               )}

@@ -183,7 +183,7 @@ export default function Experience() {
                   className="text-lg text-white/60 mt-12"
                   style={{ fontFamily: 'var(--font-display)' }}
                 >
-                  With love, {generatedStory.yourName}
+                  With love, {generatedStory.creatorName}
                 </motion.p>
               </motion.div>
             ) : (
@@ -215,7 +215,7 @@ export default function Experience() {
                   className="text-lg text-white/50"
                   style={{ fontFamily: 'var(--font-script)' }}
                 >
-                  With hope, {generatedStory.yourName}
+                  With hope, {generatedStory.creatorName}
                 </p>
               </motion.div>
             )}
@@ -254,7 +254,7 @@ export default function Experience() {
               className="text-lg text-white/60 mb-4"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              {generatedStory.partnerName}, I need to ask you something...
+              {generatedStory.recipientName}, I need to ask you something...
             </motion.p>
 
             <motion.h1
@@ -342,7 +342,7 @@ export default function Experience() {
               className="text-xl text-white/70 mb-4"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              Dear {generatedStory.partnerName},
+              Dear {generatedStory.recipientName},
             </motion.p>
 
             <motion.h1

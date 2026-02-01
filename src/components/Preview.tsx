@@ -27,8 +27,8 @@ export default function Preview() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `A Love Story for ${generatedStory.partnerName}`,
-          text: `${generatedStory.yourName} has created something special for you...`,
+          title: `A Special Story for ${generatedStory.recipientName}`,
+          text: `${generatedStory.creatorName} has created something special for you...`,
           url: shareUrl,
         });
       } catch (err) {
@@ -39,6 +39,15 @@ export default function Preview() {
       navigator.clipboard.writeText(shareUrl);
       alert('Link copied to clipboard!');
     }
+  };
+
+  const getStoryTitle = () => {
+    const type = generatedStory.recipientType;
+    if (type === 'partner') return 'A Love Story';
+    if (type === 'friend') return 'A Friendship Story';
+    if (type === 'parent' || type === 'grandparent') return 'A Family Tribute';
+    if (type === 'sibling') return 'A Sibling Story';
+    return 'A Special Story';
   };
 
   return (
@@ -106,15 +115,15 @@ export default function Preview() {
               className="text-4xl md:text-5xl font-semibold mb-4"
               style={{ fontFamily: 'var(--font-display)', color: 'var(--night-deep)' }}
             >
-              A Love Story for{' '}
-              <span className="text-gradient">{generatedStory.partnerName}</span>
+              {getStoryTitle()} for{' '}
+              <span className="text-gradient">{generatedStory.recipientName}</span>
             </h1>
 
             <p
               className="text-xl opacity-70"
               style={{ fontFamily: 'var(--font-script)', color: 'var(--rose-primary)' }}
             >
-              Written with love by {generatedStory.yourName}
+              Created with care by {generatedStory.creatorName}
             </p>
           </motion.div>
 
@@ -277,7 +286,7 @@ export default function Preview() {
             }}
           >
             <Play size={20} />
-            Start for {generatedStory.partnerName}
+            Start for {generatedStory.recipientName}
           </button>
         </div>
       </footer>

@@ -1,13 +1,14 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Heart, Sparkles, Gift, Stars } from 'lucide-react';
+import { Heart, Sparkles, Gift, Stars, Users, PartyPopper } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import HeartIcon from './HeartIcon';
 import FallingPetals from './FallingPetals';
+import AuthButton from './AuthButton';
 
 export default function Landing() {
-  const { setViewMode } = useStore();
+  const { setViewMode, user } = useStore();
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -36,26 +37,24 @@ export default function Landing() {
 
       <FallingPetals count={15} />
 
-      {/* Main content */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-12">
-        {/* Logo / Brand */}
-        <motion.div
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: 'easeOut' }}
-          className="mb-8"
-        >
-          <div className="flex items-center gap-3">
-            <HeartIcon size={40} animate color="#8B1E3F" />
+      {/* Header with Auth */}
+      <header className="absolute top-0 left-0 right-0 z-20 p-4 sm:p-6">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <HeartIcon size={28} animate color="#8B1E3F" />
             <span
-              className="text-2xl tracking-widest"
+              className="text-lg sm:text-xl tracking-wide"
               style={{ fontFamily: 'var(--font-script)', color: 'var(--rose-deep)' }}
             >
-              Our Love Story
+              Surprise Story
             </span>
           </div>
-        </motion.div>
+          <AuthButton />
+        </div>
+      </header>
 
+      {/* Main content */}
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-24">
         {/* Hero text */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -63,40 +62,75 @@ export default function Landing() {
           transition={{ duration: 1, delay: 0.3 }}
           className="text-center max-w-3xl"
         >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6"
+            style={{ background: 'rgba(212, 175, 55, 0.15)' }}
+          >
+            <Sparkles size={16} style={{ color: 'var(--gold-primary)' }} />
+            <span
+              className="text-sm"
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--gold-deep)' }}
+            >
+              Create memories that last forever
+            </span>
+          </motion.div>
+
           <h1
-            className="text-5xl md:text-7xl font-semibold mb-6 leading-tight"
+            className="text-4xl sm:text-5xl md:text-7xl font-semibold mb-6 leading-tight"
             style={{ fontFamily: 'var(--font-display)', color: 'var(--night-deep)' }}
           >
-            Create an{' '}
-            <span className="text-gradient">Unforgettable</span>
-            <br />
-            Romantic Surprise
+            Surprise Someone{' '}
+            <span className="text-gradient">Special</span>
           </h1>
 
           <p
-            className="text-xl md:text-2xl mb-12 leading-relaxed opacity-80"
+            className="text-lg sm:text-xl md:text-2xl mb-12 leading-relaxed opacity-80"
             style={{ fontFamily: 'var(--font-body)', color: 'var(--night-primary)' }}
           >
-            Transform your cherished memories into a beautiful, interactive love story
+            Transform your cherished memories into a beautiful, interactive story
             <br className="hidden md:block" />
-            that your special someone will never forget.
+            for your partner, friends, family, or anyone you care about.
           </p>
         </motion.div>
 
-        {/* CTA Button */}
-        <motion.button
+        {/* CTA Buttons */}
+        <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.6 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setViewMode('create')}
-          className="btn-romantic text-lg flex items-center gap-3 mb-16"
+          className="flex flex-col sm:flex-row gap-4 mb-16"
         >
-          <Sparkles size={20} />
-          Begin Your Story
-          <Heart size={20} />
-        </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setViewMode('create')}
+            className="btn-romantic text-lg flex items-center justify-center gap-3"
+          >
+            <Sparkles size={20} />
+            Create a Surprise
+            <Heart size={20} />
+          </motion.button>
+
+          {user && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setViewMode('dashboard')}
+              className="px-6 py-3 rounded-full text-lg flex items-center justify-center gap-2 transition-all"
+              style={{
+                background: 'white',
+                color: 'var(--rose-deep)',
+                fontFamily: 'var(--font-display)',
+                boxShadow: '0 4px 20px rgba(139, 30, 63, 0.15)',
+              }}
+            >
+              My Stories
+            </motion.button>
+          )}
+        </motion.div>
 
         {/* Features */}
         <motion.div
@@ -119,7 +153,7 @@ export default function Landing() {
             {
               icon: <Gift className="w-8 h-8" style={{ color: 'var(--rose-deep)' }} />,
               title: 'Share the Surprise',
-              description: 'Send a magical, interactive experience to your loved one',
+              description: 'Send a magical, interactive experience to someone special',
             },
           ].map((feature, index) => (
             <motion.div
@@ -146,7 +180,7 @@ export default function Landing() {
           ))}
         </motion.div>
 
-        {/* Occasions */}
+        {/* Who it's for */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -159,24 +193,79 @@ export default function Landing() {
           >
             Perfect for
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            {["Valentine's Day", 'Anniversaries', 'Birthdays', 'Proposals', 'Just Because'].map(
-              (occasion) => (
-                <span
-                  key={occasion}
-                  className="px-4 py-2 rounded-full text-sm"
-                  style={{
-                    background: 'rgba(196, 69, 105, 0.1)',
-                    color: 'var(--rose-deep)',
-                    fontFamily: 'var(--font-body)',
-                  }}
-                >
-                  {occasion}
-                </span>
-              )
-            )}
+          <div className="flex flex-wrap justify-center gap-3 mb-8">
+            {[
+              { icon: '💕', text: 'Partners' },
+              { icon: '👨‍👩‍👧‍👦', text: 'Family' },
+              { icon: '🤝', text: 'Friends' },
+              { icon: '👴👵', text: 'Grandparents' },
+              { icon: '🎓', text: 'Graduates' },
+              { icon: '💼', text: 'Colleagues' },
+            ].map((item) => (
+              <span
+                key={item.text}
+                className="px-4 py-2 rounded-full text-sm flex items-center gap-2"
+                style={{
+                  background: 'rgba(196, 69, 105, 0.1)',
+                  color: 'var(--rose-deep)',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                <span>{item.icon}</span>
+                {item.text}
+              </span>
+            ))}
+          </div>
+
+          <p
+            className="text-sm tracking-widest uppercase opacity-50 mb-4"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            For any occasion
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {[
+              "Valentine's Day",
+              'Birthdays',
+              'Anniversaries',
+              'Weddings',
+              'Graduations',
+              "Mother's Day",
+              "Father's Day",
+              'Thank You',
+              'Just Because',
+            ].map((occasion) => (
+              <span
+                key={occasion}
+                className="px-4 py-2 rounded-full text-sm"
+                style={{
+                  background: 'rgba(212, 175, 55, 0.1)',
+                  color: 'var(--gold-deep)',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                {occasion}
+              </span>
+            ))}
           </div>
         </motion.div>
+
+        {/* Sign in prompt for non-logged users */}
+        {!user && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.5 }}
+            className="mt-12 text-center"
+          >
+            <p
+              className="text-sm opacity-60"
+              style={{ fontFamily: 'var(--font-body)', color: 'var(--night-primary)' }}
+            >
+              Sign in to save your stories and access them anytime
+            </p>
+          </motion.div>
+        )}
       </div>
 
       {/* Bottom decorative wave */}
