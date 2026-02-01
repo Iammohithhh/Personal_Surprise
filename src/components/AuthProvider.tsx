@@ -1,14 +1,24 @@
 'use client';
 
 import { useEffect } from 'react';
-import { createClient } from '@/lib/supabase';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase';
 import { useStore } from '@/store/useStore';
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setIsAuthLoading } = useStore();
 
   useEffect(() => {
+    // Skip auth if Supabase is not configured
+    if (!isSupabaseConfigured()) {
+      setIsAuthLoading(false);
+      return;
+    }
+
     const supabase = createClient();
+    if (!supabase) {
+      setIsAuthLoading(false);
+      return;
+    }
 
     // Check initial session
     const checkSession = async () => {

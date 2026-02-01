@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogIn, LogOut, User, ChevronDown, LayoutDashboard } from 'lucide-react';
-import { createClient } from '@/lib/supabase';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase';
 import { useStore } from '@/store/useStore';
 
 export default function AuthButton() {
@@ -11,10 +11,16 @@ export default function AuthButton() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
+  // Don't show auth button if Supabase is not configured
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
   const handleGoogleLogin = async () => {
     setIsLoggingIn(true);
     try {
       const supabase = createClient();
+      if (!supabase) return;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -34,6 +40,7 @@ export default function AuthButton() {
   const handleLogout = async () => {
     try {
       const supabase = createClient();
+      if (!supabase) return;
       await supabase.auth.signOut();
       setShowDropdown(false);
     } catch (error) {
