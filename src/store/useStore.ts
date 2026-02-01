@@ -1,27 +1,41 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Memory, LoveStory, StoryChapter, ViewMode, ExperienceState } from '@/types';
+import { Memory, Story, StoryChapter, ViewMode, ExperienceState, Occasion, RecipientType, UserProfile } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface StoreState {
+  // Auth state
+  user: UserProfile | null;
+  setUser: (user: UserProfile | null) => void;
+  isAuthLoading: boolean;
+  setIsAuthLoading: (loading: boolean) => void;
+
   // View state
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
 
+  // User's saved stories
+  savedStories: Story[];
+  setSavedStories: (stories: Story[]) => void;
+  addSavedStory: (story: Story) => void;
+  removeSavedStory: (id: string) => void;
+
   // Story creation
-  currentStory: Partial<LoveStory>;
-  setPartnerName: (name: string) => void;
-  setYourName: (name: string) => void;
-  setOccasion: (occasion: LoveStory['occasion'], custom?: string) => void;
+  currentStory: Partial<Story>;
+  setRecipientName: (name: string) => void;
+  setCreatorName: (name: string) => void;
+  setRecipientType: (type: RecipientType) => void;
+  setOccasion: (occasion: Occasion, custom?: string) => void;
   addMemory: (memory: Omit<Memory, 'id'>) => void;
   updateMemory: (id: string, memory: Partial<Memory>) => void;
   removeMemory: (id: string) => void;
   setChapters: (chapters: StoryChapter[]) => void;
   setFinalMessage: (message: string) => void;
+  loadStoryForEdit: (story: Story) => void;
 
   // Generated story
-  generatedStory: LoveStory | null;
-  setGeneratedStory: (story: LoveStory) => void;
+  generatedStory: Story | null;
+  setGeneratedStory: (story: Story) => void;
 
   // Experience state
   experienceState: ExperienceState;
@@ -32,6 +46,7 @@ interface StoreState {
 
   // Utilities
   resetAll: () => void;
+  resetCurrentStory: () => void;
   isGenerating: boolean;
   setIsGenerating: (generating: boolean) => void;
 }
@@ -42,25 +57,50 @@ const initialExperienceState: ExperienceState = {
   hasResponded: false,
 };
 
+const initialStory: Partial<Story> = {
+  memories: [],
+  occasion: 'just_because',
+  recipientType: 'friend',
+};
+
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
+      // Auth state
+      user: null,
+      setUser: (user) => set({ user }),
+      isAuthLoading: true,
+      setIsAuthLoading: (loading) => set({ isAuthLoading: loading }),
+
       // View state
       viewMode: 'landing',
       setViewMode: (mode) => set({ viewMode: mode }),
 
-      // Story creation
-      currentStory: {
-        memories: [],
-        occasion: 'valentine',
-      },
-      setPartnerName: (name) =>
+      // User's saved stories
+      savedStories: [],
+      setSavedStories: (stories) => set({ savedStories: stories }),
+      addSavedStory: (story) =>
         set((state) => ({
-          currentStory: { ...state.currentStory, partnerName: name },
+          savedStories: [story, ...state.savedStories],
         })),
-      setYourName: (name) =>
+      removeSavedStory: (id) =>
         set((state) => ({
-          currentStory: { ...state.currentStory, yourName: name },
+          savedStories: state.savedStories.filter((s) => s.id !== id),
+        })),
+
+      // Story creation
+      currentStory: initialStory,
+      setRecipientName: (name) =>
+        set((state) => ({
+          currentStory: { ...state.currentStory, recipientName: name },
+        })),
+      setCreatorName: (name) =>
+        set((state) => ({
+          currentStory: { ...state.currentStory, creatorName: name },
+        })),
+      setRecipientType: (type) =>
+        set((state) => ({
+          currentStory: { ...state.currentStory, recipientType: type },
         })),
       setOccasion: (occasion, custom) =>
         set((state) => ({
@@ -97,6 +137,11 @@ export const useStore = create<StoreState>()(
         set((state) => ({
           currentStory: { ...state.currentStory, finalMessage: message },
         })),
+      loadStoryForEdit: (story) =>
+        set({
+          currentStory: story,
+          viewMode: 'create',
+        }),
 
       // Generated story
       generatedStory: null,
@@ -122,19 +167,26 @@ export const useStore = create<StoreState>()(
       resetAll: () =>
         set({
           viewMode: 'landing',
-          currentStory: { memories: [], occasion: 'valentine' },
+          currentStory: initialStory,
           generatedStory: null,
           experienceState: initialExperienceState,
           isGenerating: false,
+        }),
+      resetCurrentStory: () =>
+        set({
+          currentStory: initialStory,
+          generatedStory: null,
+          experienceState: initialExperienceState,
         }),
       isGenerating: false,
       setIsGenerating: (generating) => set({ isGenerating: generating }),
     }),
     {
-      name: 'love-story-storage',
+      name: 'surprise-story-storage',
       partialize: (state) => ({
         currentStory: state.currentStory,
         generatedStory: state.generatedStory,
+        savedStories: state.savedStories,
       }),
     }
   )
