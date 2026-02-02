@@ -100,6 +100,7 @@ export default function CreateStory() {
   const [step, setStep] = useState(1);
   const [newMemory, setNewMemory] = useState<Partial<Memory>>({});
   const [showAddMemory, setShowAddMemory] = useState(false);
+  const [storyStyle, setStoryStyle] = useState<'short' | 'medium' | 'none'>('short');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,6 +150,7 @@ export default function CreateStory() {
           customOccasion: currentStory.customOccasion,
           memories: currentStory.memories,
           finalMessage: currentStory.finalMessage,
+          storyStyle: storyStyle,
         }),
       });
 
@@ -475,10 +477,13 @@ export default function CreateStory() {
                         className="card-romantic p-4 flex gap-4"
                       >
                         {memory.photo ? (
-                          <div
-                            className="w-20 h-20 rounded-xl bg-cover bg-center flex-shrink-0"
-                            style={{ backgroundImage: `url(${memory.photo})` }}
-                          />
+                          <div className="w-20 h-20 rounded-xl flex-shrink-0 overflow-hidden bg-gray-100 flex items-center justify-center">
+                            <img
+                              src={memory.photo}
+                              alt="Memory"
+                              className="max-w-full max-h-full object-contain"
+                            />
+                          </div>
                         ) : (
                           <div
                             className="w-20 h-20 rounded-xl flex-shrink-0 flex items-center justify-center"
@@ -568,10 +573,13 @@ export default function CreateStory() {
                         />
                         {newMemory.photo ? (
                           <div className="relative">
-                            <div
-                              className="w-full h-48 rounded-xl bg-cover bg-center"
-                              style={{ backgroundImage: `url(${newMemory.photo})` }}
-                            />
+                            <div className="w-full min-h-[12rem] max-h-[20rem] rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+                              <img
+                                src={newMemory.photo}
+                                alt="Memory preview"
+                                className="max-w-full max-h-[20rem] object-contain"
+                              />
+                            </div>
                             <button
                               onClick={() => setNewMemory((prev) => ({ ...prev, photo: undefined }))}
                               className="absolute top-2 right-2 p-2 rounded-full bg-white/80 hover:bg-white"
@@ -740,6 +748,52 @@ export default function CreateStory() {
                           }}
                         >
                           {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Story Style Options */}
+                  <div className="card-romantic p-5 mt-6">
+                    <p
+                      className="text-sm font-medium mb-3"
+                      style={{ fontFamily: 'var(--font-display)', color: 'var(--night-deep)' }}
+                    >
+                      How should AI write your story?
+                    </p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { value: 'short', label: 'Short & Sweet', desc: 'Brief, heartfelt' },
+                        { value: 'medium', label: 'Medium', desc: 'Balanced narrative' },
+                        { value: 'none', label: 'My Words Only', desc: 'Use my notes as-is' },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => setStoryStyle(option.value as 'short' | 'medium' | 'none')}
+                          className={`p-3 rounded-xl text-center transition-all ${
+                            storyStyle === option.value
+                              ? 'ring-2 ring-rose-primary'
+                              : ''
+                          }`}
+                          style={{
+                            background:
+                              storyStyle === option.value
+                                ? 'linear-gradient(135deg, #FDF2F0 0%, #FADBD8 100%)'
+                                : 'var(--rose-cream)',
+                          }}
+                        >
+                          <span
+                            className="text-sm font-medium block"
+                            style={{ fontFamily: 'var(--font-display)', color: 'var(--night-deep)' }}
+                          >
+                            {option.label}
+                          </span>
+                          <span
+                            className="text-xs opacity-60"
+                            style={{ fontFamily: 'var(--font-body)' }}
+                          >
+                            {option.desc}
+                          </span>
                         </button>
                       ))}
                     </div>

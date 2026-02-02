@@ -64,7 +64,7 @@ export interface Story {
 // Keep LoveStory as alias for backward compatibility
 export type LoveStory = Story;
 
-export type ViewMode = 'landing' | 'create' | 'preview' | 'experience' | 'dashboard';
+export type ViewMode = 'landing' | 'create' | 'preview' | 'experience' | 'dashboard' | 'summary';
 
 export interface ExperienceState {
   currentChapter: number;

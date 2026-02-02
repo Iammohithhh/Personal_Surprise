@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import AuthProvider from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
-  title: "Our Love Story | Create Your Romantic Surprise",
-  description: "Craft an unforgettable romantic experience for your special someone. Transform your memories into a beautiful love story.",
-  keywords: ["valentine", "romantic", "love story", "surprise", "gift", "memories"],
+  title: "Surprise Story | Create Special Moments",
+  description: "Create beautiful, personalized stories for your loved ones. Perfect for birthdays, anniversaries, Valentine's Day, and any special occasion.",
+  keywords: ["surprise", "gift", "memories", "birthday", "anniversary", "valentine", "story", "family", "friends"],
 };
 
 export default function RootLayout({
@@ -19,7 +20,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className="antialiased">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,12 +1,16 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { ArrowLeft, Play, Share2, Heart, Eye, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Play, Share2, Heart, Eye, Sparkles, Copy, Check, Link2, X } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import HeartIcon from './HeartIcon';
 
 export default function Preview() {
-  const { generatedStory, setViewMode, resetExperience } = useStore();
+  const { generatedStory, setViewMode, resetExperience, shareStory } = useStore();
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   if (!generatedStory) {
     return (
@@ -21,23 +25,36 @@ export default function Preview() {
     setViewMode('experience');
   };
 
-  const handleShare = async () => {
-    // In a real app, this would generate a unique URL
-    const shareUrl = window.location.href;
-    if (navigator.share) {
+  const handleGenerateShareLink = () => {
+    // Generate or get existing share code
+    let code = generatedStory.shareCode;
+    if (!code) {
+      code = shareStory(generatedStory);
+    }
+    const link = `${window.location.origin}/s/${code}`;
+    setShareLink(link);
+    setShowShareModal(true);
+  };
+
+  const handleCopyLink = async () => {
+    if (shareLink) {
+      await navigator.clipboard.writeText(shareLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleNativeShare = async () => {
+    if (shareLink && navigator.share) {
       try {
         await navigator.share({
           title: `A Special Story for ${generatedStory.recipientName}`,
           text: `${generatedStory.creatorName} has created something special for you...`,
-          url: shareUrl,
+          url: shareLink,
         });
-      } catch (err) {
-        console.log('Share cancelled');
+      } catch {
+        // Share cancelled
       }
-    } else {
-      // Fallback: copy to clipboard
-      navigator.clipboard.writeText(shareUrl);
-      alert('Link copied to clipboard!');
     }
   };
 
@@ -75,7 +92,7 @@ export default function Preview() {
           </div>
 
           <button
-            onClick={handleShare}
+            onClick={handleGenerateShareLink}
             className="flex items-center gap-2 px-4 py-2 rounded-full transition-all hover:bg-rose-cream"
             style={{ color: 'var(--rose-deep)', fontFamily: 'var(--font-display)' }}
           >
@@ -279,17 +296,108 @@ export default function Preview() {
             Preview Experience
           </button>
           <button
-            onClick={handleStartExperience}
+            onClick={handleGenerateShareLink}
             className="btn-romantic flex-1 flex items-center justify-center gap-2"
             style={{
               background: 'var(--gradient-night)',
             }}
           >
-            <Play size={20} />
-            Start for {generatedStory.recipientName}
+            <Link2 size={20} />
+            Get Share Link
           </button>
         </div>
       </footer>
+
+      {/* Share Modal */}
+      <AnimatePresence>
+        {showShareModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6"
+            style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+            onClick={() => setShowShareModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3
+                  className="text-xl font-medium"
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--night-deep)' }}
+                >
+                  Share Your Story
+                </h3>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="p-1 rounded-full hover:bg-gray-100"
+                >
+                  <X size={20} style={{ color: 'var(--night-deep)' }} />
+                </button>
+              </div>
+
+              <p
+                className="text-sm opacity-70 mb-4"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
+                Send this link to {generatedStory.recipientName} so they can experience the story you created!
+              </p>
+
+              {/* Share link input */}
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  readOnly
+                  value={shareLink || ''}
+                  className="flex-1 px-4 py-3 rounded-xl text-sm"
+                  style={{
+                    background: 'var(--rose-cream)',
+                    color: 'var(--night-deep)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                />
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleCopyLink}
+                  className="px-4 py-3 rounded-xl flex items-center gap-2"
+                  style={{
+                    background: copied ? '#10b981' : 'var(--gradient-romantic)',
+                    color: 'white',
+                    fontFamily: 'var(--font-display)',
+                  }}
+                >
+                  {copied ? <Check size={18} /> : <Copy size={18} />}
+                  {copied ? 'Copied!' : 'Copy'}
+                </motion.button>
+              </div>
+
+              {/* Native share button (mobile) */}
+              {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleNativeShare}
+                  className="w-full py-3 rounded-xl flex items-center justify-center gap-2"
+                  style={{
+                    background: 'var(--rose-cream)',
+                    color: 'var(--rose-deep)',
+                    fontFamily: 'var(--font-display)',
+                  }}
+                >
+                  <Share2 size={18} />
+                  Share via...
+                </motion.button>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

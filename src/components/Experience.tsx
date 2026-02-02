@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, ChevronRight, Volume2, VolumeX, Pause, Play } from 'lucide-react';
+import { Heart, ChevronRight, Volume2, VolumeX, Pause, Play, Grid } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import StarryBackground from './StarryBackground';
 import HeartIcon from './HeartIcon';
@@ -180,11 +180,29 @@ export default function Experience() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 2, duration: 0.8 }}
-                  className="text-lg text-white/60 mt-12"
+                  className="text-lg text-white/60 mt-8"
                   style={{ fontFamily: 'var(--font-display)' }}
                 >
                   With love, {generatedStory.creatorName}
                 </motion.p>
+
+                <motion.button
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 2.5, duration: 0.5 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setViewMode('summary')}
+                  className="mt-8 px-6 py-3 rounded-full flex items-center gap-2 mx-auto"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    color: 'white',
+                    fontFamily: 'var(--font-display)',
+                  }}
+                >
+                  <Grid size={18} />
+                  View All Memories
+                </motion.button>
               </motion.div>
             ) : (
               <motion.div
@@ -212,11 +230,26 @@ export default function Experience() {
                 </p>
 
                 <p
-                  className="text-lg text-white/50"
+                  className="text-lg text-white/50 mb-8"
                   style={{ fontFamily: 'var(--font-script)' }}
                 >
                   With hope, {generatedStory.creatorName}
                 </p>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setViewMode('summary')}
+                  className="px-6 py-3 rounded-full flex items-center gap-2 mx-auto"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    color: 'white',
+                    fontFamily: 'var(--font-display)',
+                  }}
+                >
+                  <Grid size={18} />
+                  View All Memories
+                </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -225,7 +258,10 @@ export default function Experience() {
     );
   }
 
-  // Final reveal with question
+  // Check if this is a romantic occasion that warrants yes/no response
+  const isRomanticOccasion = generatedStory.occasion === 'valentine' || generatedStory.occasion === 'proposal';
+
+  // Final reveal with message (and question for romantic occasions)
   if (showFinalReveal) {
     return (
       <div className="min-h-screen relative overflow-hidden">
@@ -247,65 +283,113 @@ export default function Experience() {
               <HeartIcon size={80} color="#C44569" filled animate />
             </motion.div>
 
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.8 }}
-              className="text-lg text-white/60 mb-4"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              {generatedStory.recipientName}, I need to ask you something...
-            </motion.p>
+            {isRomanticOccasion && (
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.8 }}
+                className="text-lg text-white/60 mb-4"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                {generatedStory.recipientName}, I need to ask you something...
+              </motion.p>
+            )}
 
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.5, duration: 1 }}
+              transition={{ delay: isRomanticOccasion ? 1.5 : 0.5, duration: 1 }}
               className="text-4xl md:text-6xl font-semibold mb-12 text-white leading-tight"
               style={{ fontFamily: 'var(--font-script)' }}
             >
               {generatedStory.finalMessage}
             </motion.h1>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 3, duration: 0.5 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
-            >
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleResponse('yes')}
-                className="px-12 py-4 rounded-full text-xl font-medium transition-all"
-                style={{
-                  background: 'var(--gradient-romantic)',
-                  color: 'white',
-                  fontFamily: 'var(--font-display)',
-                  boxShadow: '0 0 40px rgba(196, 69, 105, 0.5)',
-                }}
+            {isRomanticOccasion ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 3, duration: 0.5 }}
+                className="flex flex-col sm:flex-row gap-4 justify-center"
               >
-                <span className="flex items-center gap-2">
-                  <Heart className="w-6 h-6" />
-                  Yes!
-                </span>
-              </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleResponse('yes')}
+                  className="px-12 py-4 rounded-full text-xl font-medium transition-all"
+                  style={{
+                    background: 'var(--gradient-romantic)',
+                    color: 'white',
+                    fontFamily: 'var(--font-display)',
+                    boxShadow: '0 0 40px rgba(196, 69, 105, 0.5)',
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Heart className="w-6 h-6" />
+                    Yes!
+                  </span>
+                </motion.button>
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleResponse('no')}
-                className="px-12 py-4 rounded-full text-xl font-medium transition-all"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: 'white',
-                  fontFamily: 'var(--font-display)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                }}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleResponse('no')}
+                  className="px-12 py-4 rounded-full text-xl font-medium transition-all"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: 'white',
+                    fontFamily: 'var(--font-display)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                  }}
+                >
+                  Not yet...
+                </motion.button>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 2, duration: 0.5 }}
+                className="flex flex-col items-center gap-4"
               >
-                Not yet...
-              </motion.button>
-            </motion.div>
+                <motion.p
+                  className="text-lg text-white/60"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  With love, {generatedStory.creatorName}
+                </motion.p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setViewMode('summary')}
+                    className="px-6 py-3 rounded-full text-lg font-medium transition-all flex items-center gap-2"
+                    style={{
+                      background: 'var(--gradient-romantic)',
+                      color: 'white',
+                      fontFamily: 'var(--font-display)',
+                    }}
+                  >
+                    <Grid className="w-5 h-5" />
+                    View All Memories
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setViewMode('landing')}
+                    className="px-6 py-3 rounded-full text-lg font-medium transition-all flex items-center gap-2"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.15)',
+                      color: 'white',
+                      fontFamily: 'var(--font-display)',
+                    }}
+                  >
+                    <Heart className="w-5 h-5" />
+                    Home
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
           </motion.div>
         </div>
       </div>
@@ -491,12 +575,13 @@ export default function Experience() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.7, duration: 0.8 }}
-                  className="mb-8"
+                  className="mb-8 flex justify-center"
                 >
-                  <div
-                    className="w-full max-w-md mx-auto h-64 rounded-2xl bg-cover bg-center"
+                  <img
+                    src={chapter.memory.photo}
+                    alt="Memory"
+                    className="max-w-full max-h-[20rem] rounded-2xl object-contain"
                     style={{
-                      backgroundImage: `url(${chapter.memory.photo})`,
                       boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
                     }}
                   />

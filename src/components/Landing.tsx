@@ -1,14 +1,22 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Heart, Sparkles, Gift, Stars, Users, PartyPopper } from 'lucide-react';
+import { Heart, Sparkles, Gift, Stars, Users, PartyPopper, RefreshCw } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import HeartIcon from './HeartIcon';
 import FallingPetals from './FallingPetals';
 import AuthButton from './AuthButton';
 
 export default function Landing() {
-  const { setViewMode, user } = useStore();
+  const { setViewMode, user, currentStory, resetCurrentStory } = useStore();
+
+  // Check if there's existing session data
+  const hasExistingData = currentStory.recipientName || currentStory.creatorName || (currentStory.memories && currentStory.memories.length > 0);
+
+  const handleStartFresh = () => {
+    resetCurrentStory();
+    setViewMode('create');
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -110,9 +118,27 @@ export default function Landing() {
             className="btn-romantic text-lg flex items-center justify-center gap-3"
           >
             <Sparkles size={20} />
-            Create a Surprise
+            {hasExistingData ? 'Continue Creating' : 'Create a Surprise'}
             <Heart size={20} />
           </motion.button>
+
+          {hasExistingData && (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleStartFresh}
+              className="px-6 py-3 rounded-full text-lg flex items-center justify-center gap-2 transition-all"
+              style={{
+                background: 'white',
+                color: 'var(--rose-deep)',
+                fontFamily: 'var(--font-display)',
+                boxShadow: '0 4px 20px rgba(139, 30, 63, 0.15)',
+              }}
+            >
+              <RefreshCw size={18} />
+              Start Fresh
+            </motion.button>
+          )}
 
           {user && (
             <motion.button

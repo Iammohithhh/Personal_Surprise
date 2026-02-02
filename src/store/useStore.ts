@@ -3,6 +3,16 @@ import { persist } from 'zustand/middleware';
 import { Memory, Story, StoryChapter, ViewMode, ExperienceState, Occasion, RecipientType, UserProfile } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
+// Generate a short, URL-friendly share code
+function generateShareCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 interface StoreState {
   // Auth state
   user: UserProfile | null;
@@ -19,6 +29,11 @@ interface StoreState {
   setSavedStories: (stories: Story[]) => void;
   addSavedStory: (story: Story) => void;
   removeSavedStory: (id: string) => void;
+
+  // Shared stories (code -> story mapping)
+  sharedStories: Record<string, Story>;
+  shareStory: (story: Story) => string;
+  getSharedStory: (code: string) => Story | null;
 
   // Story creation
   currentStory: Partial<Story>;
@@ -87,6 +102,23 @@ export const useStore = create<StoreState>()(
         set((state) => ({
           savedStories: state.savedStories.filter((s) => s.id !== id),
         })),
+
+      // Shared stories
+      sharedStories: {},
+      shareStory: (story) => {
+        const code = generateShareCode();
+        const storyWithCode = { ...story, shareCode: code };
+        set((state) => ({
+          sharedStories: { ...state.sharedStories, [code]: storyWithCode },
+          // Also update the generated story with the share code
+          generatedStory: state.generatedStory?.id === story.id ? storyWithCode : state.generatedStory,
+        }));
+        return code;
+      },
+      getSharedStory: (code) => {
+        const state = get();
+        return state.sharedStories[code] || null;
+      },
 
       // Story creation
       currentStory: initialStory,
@@ -187,6 +219,7 @@ export const useStore = create<StoreState>()(
         currentStory: state.currentStory,
         generatedStory: state.generatedStory,
         savedStories: state.savedStories,
+        sharedStories: state.sharedStories,
       }),
     }
   )
