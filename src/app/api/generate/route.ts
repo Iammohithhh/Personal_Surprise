@@ -162,6 +162,78 @@ Respond with JSON only:
 }`;
 }
 
+// Process a single memory with Groq
+async function processMemoryWithGroq(
+  groq: InstanceType<typeof import('groq-sdk').default>,
+  memory: Memory,
+  index: number,
+  total: number,
+  creatorName: string,
+  recipientName: string,
+  occasionText: string,
+  recipientType: string,
+  style: 'short' | 'medium'
+): Promise<StoryChapter> {
+  const prompt = buildPrompt(memory, index, total, creatorName, recipientName, occasionText, recipientType, style);
+
+  try {
+    // Shorter timeout per request - 15 seconds
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Groq timeout')), 15000);
+    });
+
+    const completionPromise = groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    });
+
+    const completion = await Promise.race([completionPromise, timeoutPromise]) as Awaited<typeof completionPromise>;
+
+    const content = completion.choices[0]?.message?.content || '{}';
+    const chapterContent = JSON.parse(content);
+
+    return {
+      id: uuidv4(),
+      title: chapterContent.title || `Memory ${index + 1}`,
+      narrative: chapterContent.narrative || memory.note || 'A cherished memory.',
+      memory,
+      atmosphere: chapterContent.atmosphere,
+    };
+  } catch (aiError) {
+    console.error(`Groq chapter ${index + 1} error:`, aiError);
+    const generated = generateNarrative(memory, index, total, recipientName, !!memory.photo, style);
+    return {
+      id: uuidv4(),
+      ...generated,
+      memory,
+    };
+  }
+}
+
+// Process memories in batches with concurrency limit
+async function processBatch<T>(
+  items: T[],
+  processor: (item: T, index: number) => Promise<StoryChapter>,
+  concurrency: number = 3
+): Promise<StoryChapter[]> {
+  const results: StoryChapter[] = new Array(items.length);
+
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency);
+    const batchPromises = batch.map((item, batchIndex) =>
+      processor(item, i + batchIndex)
+    );
+    const batchResults = await Promise.all(batchPromises);
+    batchResults.forEach((result, batchIndex) => {
+      results[i + batchIndex] = result;
+    });
+  }
+
+  return results;
+}
+
 async function generateWithGroq(
   memories: Memory[],
   creatorName: string,
@@ -173,44 +245,69 @@ async function generateWithGroq(
   const Groq = (await import('groq-sdk')).default;
   const groq = new Groq({
     apiKey: process.env.GROQ_API_KEY,
+    timeout: 20000, // 20 second timeout for SDK
   });
 
-  const chapters: StoryChapter[] = [];
-
-  for (let i = 0; i < memories.length; i++) {
-    const memory = memories[i];
-    const prompt = buildPrompt(memory, i, memories.length, creatorName, recipientName, occasionText, recipientType, style);
-
-    try {
-      const completion = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        response_format: { type: 'json_object' },
-      });
-
-      const content = completion.choices[0]?.message?.content || '{}';
-      const chapterContent = JSON.parse(content);
-
-      chapters.push({
-        id: uuidv4(),
-        title: chapterContent.title || `Memory ${i + 1}`,
-        narrative: chapterContent.narrative || memory.note || 'A cherished memory.',
-        memory,
-        atmosphere: chapterContent.atmosphere,
-      });
-    } catch (aiError) {
-      console.error('Groq chapter error:', aiError);
-      const generated = generateNarrative(memory, i, memories.length, recipientName, !!memory.photo, style);
-      chapters.push({
-        id: uuidv4(),
-        ...generated,
-        memory,
-      });
-    }
-  }
+  // Process memories in parallel batches of 3
+  const chapters = await processBatch(
+    memories,
+    (memory, index) => processMemoryWithGroq(
+      groq, memory, index, memories.length,
+      creatorName, recipientName, occasionText, recipientType, style
+    ),
+    3 // Process 3 at a time
+  );
 
   return chapters;
+}
+
+// Process a single memory with OpenAI
+async function processMemoryWithOpenAI(
+  openai: InstanceType<typeof import('openai').default>,
+  memory: Memory,
+  index: number,
+  total: number,
+  creatorName: string,
+  recipientName: string,
+  occasionText: string,
+  recipientType: string,
+  style: 'short' | 'medium'
+): Promise<StoryChapter> {
+  const prompt = buildPrompt(memory, index, total, creatorName, recipientName, occasionText, recipientType, style);
+
+  try {
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('OpenAI timeout')), 15000);
+    });
+
+    const completionPromise = openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      response_format: { type: 'json_object' },
+    });
+
+    const completion = await Promise.race([completionPromise, timeoutPromise]) as Awaited<typeof completionPromise>;
+
+    const content = completion.choices[0]?.message?.content || '{}';
+    const chapterContent = JSON.parse(content);
+
+    return {
+      id: uuidv4(),
+      title: chapterContent.title || `Memory ${index + 1}`,
+      narrative: chapterContent.narrative || memory.note || 'A cherished memory.',
+      memory,
+      atmosphere: chapterContent.atmosphere,
+    };
+  } catch (aiError) {
+    console.error(`OpenAI chapter ${index + 1} error:`, aiError);
+    const generated = generateNarrative(memory, index, total, recipientName, !!memory.photo, style);
+    return {
+      id: uuidv4(),
+      ...generated,
+      memory,
+    };
+  }
 }
 
 async function generateWithOpenAI(
@@ -224,42 +321,18 @@ async function generateWithOpenAI(
   const OpenAI = (await import('openai')).default;
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
+    timeout: 20000,
   });
 
-  const chapters: StoryChapter[] = [];
-
-  for (let i = 0; i < memories.length; i++) {
-    const memory = memories[i];
-    const prompt = buildPrompt(memory, i, memories.length, creatorName, recipientName, occasionText, recipientType, style);
-
-    try {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        response_format: { type: 'json_object' },
-      });
-
-      const content = completion.choices[0]?.message?.content || '{}';
-      const chapterContent = JSON.parse(content);
-
-      chapters.push({
-        id: uuidv4(),
-        title: chapterContent.title || `Memory ${i + 1}`,
-        narrative: chapterContent.narrative || memory.note || 'A cherished memory.',
-        memory,
-        atmosphere: chapterContent.atmosphere,
-      });
-    } catch (aiError) {
-      console.error('OpenAI chapter error:', aiError);
-      const generated = generateNarrative(memory, i, memories.length, recipientName, !!memory.photo, style);
-      chapters.push({
-        id: uuidv4(),
-        ...generated,
-        memory,
-      });
-    }
-  }
+  // Process memories in parallel batches of 3
+  const chapters = await processBatch(
+    memories,
+    (memory, index) => processMemoryWithOpenAI(
+      openai, memory, index, memories.length,
+      creatorName, recipientName, occasionText, recipientType, style
+    ),
+    3 // Process 3 at a time
+  );
 
   return chapters;
 }
@@ -290,48 +363,83 @@ export async function POST(request: Request) {
 
     let chapters: StoryChapter[] = [];
 
+    // Helper to generate local fallback chapters
+    const generateLocalChapters = () => memories.map((memory, index) => {
+      const generated = generateNarrative(memory, index, memories.length, recipientName, !!memory.photo, storyStyle as 'short' | 'medium' | 'none');
+      return { id: uuidv4(), ...generated, memory };
+    });
+
+    // Overall timeout for AI generation - 45 seconds max
+    const OVERALL_TIMEOUT = 45000;
+
     // If style is "none", skip AI and use user's own words
     if (storyStyle === 'none') {
       console.log('Using user notes directly (no AI)...');
-      chapters = memories.map((memory, index) => {
-        const generated = generateNarrative(memory, index, memories.length, recipientName, !!memory.photo, 'none');
-        return { id: uuidv4(), ...generated, memory };
-      });
+      chapters = generateLocalChapters();
+    }
+    // For many memories (6+), use faster local generation to avoid timeouts
+    else if (memories.length >= 6 && storyStyle === 'short') {
+      console.log(`${memories.length} memories detected, using optimized generation...`);
+
+      // Try AI with overall timeout, fall back to local if it takes too long
+      try {
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Overall timeout')), OVERALL_TIMEOUT);
+        });
+
+        const aiPromise = hasGroq
+          ? generateWithGroq(memories, creatorName, recipientName, occasionText, recipientType, storyStyle)
+          : hasOpenAI
+          ? generateWithOpenAI(memories, creatorName, recipientName, occasionText, recipientType, storyStyle)
+          : Promise.resolve(generateLocalChapters());
+
+        chapters = await Promise.race([aiPromise, timeoutPromise]);
+      } catch (error) {
+        console.error('AI generation timed out or failed, using local:', error);
+        chapters = generateLocalChapters();
+      }
     }
     // Try Groq first (free!), then OpenAI, then fallback
     else if (hasGroq) {
       try {
         console.log('Using Groq for story generation...');
-        chapters = await generateWithGroq(memories, creatorName, recipientName, occasionText, recipientType, storyStyle as 'short' | 'medium');
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Overall timeout')), OVERALL_TIMEOUT);
+        });
+        chapters = await Promise.race([
+          generateWithGroq(memories, creatorName, recipientName, occasionText, recipientType, storyStyle as 'short' | 'medium'),
+          timeoutPromise
+        ]);
       } catch (error) {
         console.error('Groq failed, trying fallback:', error);
         if (hasOpenAI) {
-          chapters = await generateWithOpenAI(memories, creatorName, recipientName, occasionText, recipientType, storyStyle as 'short' | 'medium');
+          try {
+            chapters = await generateWithOpenAI(memories, creatorName, recipientName, occasionText, recipientType, storyStyle as 'short' | 'medium');
+          } catch {
+            chapters = generateLocalChapters();
+          }
         } else {
-          chapters = memories.map((memory, index) => {
-            const generated = generateNarrative(memory, index, memories.length, recipientName, !!memory.photo, storyStyle as 'short' | 'medium' | 'none');
-            return { id: uuidv4(), ...generated, memory };
-          });
+          chapters = generateLocalChapters();
         }
       }
     } else if (hasOpenAI) {
       try {
         console.log('Using OpenAI for story generation...');
-        chapters = await generateWithOpenAI(memories, creatorName, recipientName, occasionText, recipientType, storyStyle as 'short' | 'medium');
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Overall timeout')), OVERALL_TIMEOUT);
+        });
+        chapters = await Promise.race([
+          generateWithOpenAI(memories, creatorName, recipientName, occasionText, recipientType, storyStyle as 'short' | 'medium'),
+          timeoutPromise
+        ]);
       } catch (error) {
         console.error('OpenAI failed, using fallback:', error);
-        chapters = memories.map((memory, index) => {
-          const generated = generateNarrative(memory, index, memories.length, recipientName, !!memory.photo, storyStyle as 'short' | 'medium' | 'none');
-          return { id: uuidv4(), ...generated, memory };
-        });
+        chapters = generateLocalChapters();
       }
     } else {
       // No AI API keys - use pre-written narratives
       console.log('No AI API key found, using fallback narratives...');
-      chapters = memories.map((memory, index) => {
-        const generated = generateNarrative(memory, index, memories.length, recipientName, !!memory.photo, storyStyle as 'short' | 'medium' | 'none');
-        return { id: uuidv4(), ...generated, memory };
-      });
+      chapters = generateLocalChapters();
     }
 
     const story: Story = {
