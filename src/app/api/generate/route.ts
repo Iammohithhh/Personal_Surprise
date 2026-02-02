@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server';
 import { Memory, Story, StoryChapter, Occasion, RecipientType } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
+// Memory data sent to API (without heavy base64 photo data)
+interface MemoryInput {
+  id: string;
+  note?: string;
+  date?: string;
+  location?: string;
+  hasPhoto?: boolean; // Flag indicating if original has a photo
+  photo?: string; // For backward compatibility, but should not be sent
+}
+
 interface GenerateRequest {
   // New field names
   recipientName?: string;
@@ -12,14 +22,14 @@ interface GenerateRequest {
   yourName?: string;
   occasion: Occasion;
   customOccasion?: string;
-  memories: Memory[];
+  memories: MemoryInput[];
   finalMessage: string;
   storyStyle?: 'short' | 'medium' | 'none';
 }
 
 // Generate narratives - style can be 'short', 'medium', or 'none'
 function generateNarrative(
-  memory: Memory,
+  memory: MemoryInput,
   index: number,
   total: number,
   recipientName: string,
@@ -106,7 +116,7 @@ function generateNarrative(
 }
 
 function buildPrompt(
-  memory: Memory,
+  memory: MemoryInput,
   index: number,
   total: number,
   creatorName: string,
@@ -117,7 +127,7 @@ function buildPrompt(
 ): string {
   const isFirst = index === 0;
   const isLast = index === total - 1;
-  const hasPhoto = !!memory.photo;
+  const hasPhoto = memory.hasPhoto ?? !!memory.photo;
   const hasNote = !!memory.note;
 
   const relationshipContext = recipientType === 'partner'
@@ -165,7 +175,7 @@ Respond with JSON only:
 // Process a single memory with Groq
 async function processMemoryWithGroq(
   groq: InstanceType<typeof import('groq-sdk').default>,
-  memory: Memory,
+  memory: MemoryInput,
   index: number,
   total: number,
   creatorName: string,
@@ -175,6 +185,7 @@ async function processMemoryWithGroq(
   style: 'short' | 'medium'
 ): Promise<StoryChapter> {
   const prompt = buildPrompt(memory, index, total, creatorName, recipientName, occasionText, recipientType, style);
+  const hasPhoto = memory.hasPhoto ?? !!memory.photo;
 
   try {
     // Short timeout per request - 8 seconds (fast model)
@@ -198,12 +209,12 @@ async function processMemoryWithGroq(
       id: uuidv4(),
       title: chapterContent.title || `Memory ${index + 1}`,
       narrative: chapterContent.narrative || memory.note || 'A cherished memory.',
-      memory,
+      memory: memory as Memory,
       atmosphere: chapterContent.atmosphere,
     };
   } catch (aiError) {
     console.error(`Groq chapter ${index + 1} error:`, aiError);
-    const generated = generateNarrative(memory, index, total, recipientName, !!memory.photo, style);
+    const generated = generateNarrative(memory, index, total, recipientName, hasPhoto, style);
     return {
       id: uuidv4(),
       ...generated,
@@ -264,7 +275,7 @@ async function generateWithGroq(
 // Process a single memory with OpenAI
 async function processMemoryWithOpenAI(
   openai: InstanceType<typeof import('openai').default>,
-  memory: Memory,
+  memory: MemoryInput,
   index: number,
   total: number,
   creatorName: string,
@@ -274,6 +285,7 @@ async function processMemoryWithOpenAI(
   style: 'short' | 'medium'
 ): Promise<StoryChapter> {
   const prompt = buildPrompt(memory, index, total, creatorName, recipientName, occasionText, recipientType, style);
+  const hasPhoto = memory.hasPhoto ?? !!memory.photo;
 
   try {
     const timeoutPromise = new Promise((_, reject) => {
@@ -296,16 +308,16 @@ async function processMemoryWithOpenAI(
       id: uuidv4(),
       title: chapterContent.title || `Memory ${index + 1}`,
       narrative: chapterContent.narrative || memory.note || 'A cherished memory.',
-      memory,
+      memory: memory as Memory,
       atmosphere: chapterContent.atmosphere,
     };
   } catch (aiError) {
     console.error(`OpenAI chapter ${index + 1} error:`, aiError);
-    const generated = generateNarrative(memory, index, total, recipientName, !!memory.photo, style);
+    const generated = generateNarrative(memory, index, total, recipientName, hasPhoto, style);
     return {
       id: uuidv4(),
       ...generated,
-      memory,
+      memory: memory as Memory,
     };
   }
 }
@@ -365,8 +377,9 @@ export async function POST(request: Request) {
 
     // Helper to generate local fallback chapters
     const generateLocalChapters = () => memories.map((memory, index) => {
-      const generated = generateNarrative(memory, index, memories.length, recipientName, !!memory.photo, storyStyle as 'short' | 'medium' | 'none');
-      return { id: uuidv4(), ...generated, memory };
+      const hasPhoto = memory.hasPhoto ?? !!memory.photo;
+      const generated = generateNarrative(memory, index, memories.length, recipientName, hasPhoto, storyStyle as 'short' | 'medium' | 'none');
+      return { id: uuidv4(), ...generated, memory: memory as Memory };
     });
 
     // Overall timeout for AI generation - 25 seconds max

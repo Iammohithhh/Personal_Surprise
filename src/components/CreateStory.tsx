@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import HeartIcon from './HeartIcon';
-import { Memory, Story, Occasion, RecipientType } from '@/types';
+import { Memory, Story, StoryChapter, Occasion, RecipientType } from '@/types';
 
 const recipientTypes = [
   { value: 'partner', label: 'Partner / Spouse', emoji: '💕' },
@@ -139,6 +139,16 @@ export default function CreateStory() {
     setIsGenerating(true);
 
     try {
+      // Strip photos from memories before sending - they're huge base64 strings!
+      // We'll re-attach them after getting the response
+      const memoriesWithoutPhotos = (currentStory.memories || []).map(m => ({
+        id: m.id,
+        note: m.note,
+        date: m.date,
+        location: m.location,
+        hasPhoto: !!m.photo, // Just indicate if there's a photo
+      }));
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,7 +158,7 @@ export default function CreateStory() {
           recipientType: currentStory.recipientType,
           occasion: currentStory.occasion,
           customOccasion: currentStory.customOccasion,
-          memories: currentStory.memories,
+          memories: memoriesWithoutPhotos,
           finalMessage: currentStory.finalMessage,
           storyStyle: storyStyle,
         }),
@@ -157,6 +167,21 @@ export default function CreateStory() {
       if (!response.ok) throw new Error('Failed to generate story');
 
       const story = await response.json();
+
+      // Re-attach photos to the chapters from original memories
+      const originalMemories = currentStory.memories || [];
+      if (story.chapters) {
+        story.chapters = story.chapters.map((chapter: StoryChapter, index: number) => ({
+          ...chapter,
+          memory: {
+            ...chapter.memory,
+            photo: originalMemories[index]?.photo,
+          },
+        }));
+      }
+      // Also update the memories array in the story
+      story.memories = originalMemories;
+
       setGeneratedStory(story as Story);
       setViewMode('preview');
     } catch (error) {
