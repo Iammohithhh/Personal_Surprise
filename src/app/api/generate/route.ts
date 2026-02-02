@@ -382,6 +382,11 @@ export async function POST(request: Request) {
       return { id: uuidv4(), ...generated, memory: memory as Memory };
     });
 
+    // DISABLED AI - Just use user's own notes directly (instant!)
+    console.log('Using user notes directly (no AI)...');
+    chapters = generateLocalChapters();
+
+    /* AI GENERATION DISABLED - uncomment if you want to re-enable later
     // Overall timeout for AI generation - 25 seconds max
     const OVERALL_TIMEOUT = 25000;
 
@@ -459,6 +464,7 @@ export async function POST(request: Request) {
       console.log('No AI API key found, using fallback narratives...');
       chapters = generateLocalChapters();
     }
+    */
 
     const story: Story = {
       id: uuidv4(),
