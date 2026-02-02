@@ -2,16 +2,17 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Play, Share2, Heart, Eye, Sparkles, Copy, Check, Link2, X } from 'lucide-react';
+import { ArrowLeft, Play, Share2, Heart, Eye, Sparkles, Copy, Check, Link2, X, Loader2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import HeartIcon from './HeartIcon';
-import { encodeStoryForShare } from '@/lib/shareUtils';
 
 export default function Preview() {
   const { generatedStory, setViewMode, resetExperience } = useStore();
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   if (!generatedStory) {
     return (
@@ -26,12 +27,32 @@ export default function Preview() {
     setViewMode('experience');
   };
 
-  const handleGenerateShareLink = () => {
-    // Encode story data directly in URL (no backend needed!)
-    const encoded = encodeStoryForShare(generatedStory);
-    const link = `${window.location.origin}/s/${encoded}`;
-    setShareLink(link);
-    setShowShareModal(true);
+  const handleGenerateShareLink = async () => {
+    setIsSharing(true);
+    setShareError(null);
+
+    try {
+      // Save story to Supabase and get short code
+      const response = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(generatedStory),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create share link');
+      }
+
+      const { code } = await response.json();
+      const link = `${window.location.origin}/s/${code}`;
+      setShareLink(link);
+      setShowShareModal(true);
+    } catch (error) {
+      console.error('Share error:', error);
+      setShareError('Failed to create share link. Please try again.');
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const handleCopyLink = async () => {
@@ -91,11 +112,12 @@ export default function Preview() {
 
           <button
             onClick={handleGenerateShareLink}
-            className="flex items-center gap-2 px-4 py-2 rounded-full transition-all hover:bg-rose-cream"
+            disabled={isSharing}
+            className="flex items-center gap-2 px-4 py-2 rounded-full transition-all hover:bg-rose-cream disabled:opacity-50"
             style={{ color: 'var(--rose-deep)', fontFamily: 'var(--font-display)' }}
           >
-            <Share2 size={18} />
-            Share
+            {isSharing ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
+            {isSharing ? 'Creating...' : 'Share'}
           </button>
         </div>
       </header>
@@ -295,13 +317,14 @@ export default function Preview() {
           </button>
           <button
             onClick={handleGenerateShareLink}
-            className="btn-romantic flex-1 flex items-center justify-center gap-2"
+            disabled={isSharing}
+            className="btn-romantic flex-1 flex items-center justify-center gap-2 disabled:opacity-50"
             style={{
               background: 'var(--gradient-night)',
             }}
           >
-            <Link2 size={20} />
-            Get Share Link
+            {isSharing ? <Loader2 size={20} className="animate-spin" /> : <Link2 size={20} />}
+            {isSharing ? 'Creating Link...' : 'Get Share Link'}
           </button>
         </div>
       </footer>

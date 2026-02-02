@@ -8,29 +8,43 @@ import { useStore } from '@/store/useStore';
 import Experience from '@/components/Experience';
 import HeartIcon from '@/components/HeartIcon';
 import { Story } from '@/types';
-import { decodeStoryFromShare } from '@/lib/shareUtils';
 
 export default function SharedStoryPage() {
   const params = useParams();
   const code = params.code as string;
   const { setGeneratedStory, resetExperience } = useStore();
-  const [story, setStory] = useState<Story | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Decode the story from the URL
-    const decodedStory = decodeStoryFromShare(code);
+    async function fetchStory() {
+      try {
+        // Fetch story from Supabase via API
+        const response = await fetch(`/api/share/${code}`);
 
-    if (decodedStory) {
-      setStory(decodedStory);
-      setGeneratedStory(decodedStory);
-      resetExperience();
-    } else {
-      setNotFound(true);
+        if (!response.ok) {
+          if (response.status === 404) {
+            setNotFound(true);
+          } else {
+            setError('Failed to load story');
+          }
+          setLoading(false);
+          return;
+        }
+
+        const story: Story = await response.json();
+        setGeneratedStory(story);
+        resetExperience();
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching story:', err);
+        setError('Failed to load story');
+        setLoading(false);
+      }
     }
 
-    setLoading(false);
+    fetchStory();
   }, [code, setGeneratedStory, resetExperience]);
 
   if (loading) {
@@ -55,7 +69,7 @@ export default function SharedStoryPage() {
     );
   }
 
-  if (notFound) {
+  if (notFound || error) {
     return (
       <div
         className="min-h-screen flex flex-col items-center justify-center p-6"
@@ -77,14 +91,16 @@ export default function SharedStoryPage() {
             className="text-2xl font-semibold mb-3"
             style={{ fontFamily: 'var(--font-display)', color: 'var(--night-deep)' }}
           >
-            Story Not Found
+            {notFound ? 'Story Not Found' : 'Something Went Wrong'}
           </h1>
 
           <p
             className="opacity-70 mb-6"
             style={{ fontFamily: 'var(--font-body)' }}
           >
-            This story link may be invalid or corrupted. Ask the person who sent you this link to share it again.
+            {notFound
+              ? 'This story link may have expired or doesn\'t exist. Ask the person who sent you this link to share it again.'
+              : error || 'Please try again later.'}
           </p>
 
           <a
