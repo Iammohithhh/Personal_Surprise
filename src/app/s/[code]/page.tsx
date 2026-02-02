@@ -8,29 +8,30 @@ import { useStore } from '@/store/useStore';
 import Experience from '@/components/Experience';
 import HeartIcon from '@/components/HeartIcon';
 import { Story } from '@/types';
+import { decodeStoryFromShare } from '@/lib/shareUtils';
 
 export default function SharedStoryPage() {
   const params = useParams();
   const code = params.code as string;
-  const { getSharedStory, setGeneratedStory, resetExperience } = useStore();
+  const { setGeneratedStory, resetExperience } = useStore();
   const [story, setStory] = useState<Story | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    // Try to get the story from the store
-    const sharedStory = getSharedStory(code);
+    // Decode the story from the URL
+    const decodedStory = decodeStoryFromShare(code);
 
-    if (sharedStory) {
-      setStory(sharedStory);
-      setGeneratedStory(sharedStory);
+    if (decodedStory) {
+      setStory(decodedStory);
+      setGeneratedStory(decodedStory);
       resetExperience();
     } else {
       setNotFound(true);
     }
 
     setLoading(false);
-  }, [code, getSharedStory, setGeneratedStory, resetExperience]);
+  }, [code, setGeneratedStory, resetExperience]);
 
   if (loading) {
     return (
@@ -83,7 +84,7 @@ export default function SharedStoryPage() {
             className="opacity-70 mb-6"
             style={{ fontFamily: 'var(--font-body)' }}
           >
-            This story link may have expired or the story doesn't exist. Ask the person who sent you this link to share it again.
+            This story link may be invalid or corrupted. Ask the person who sent you this link to share it again.
           </p>
 
           <a

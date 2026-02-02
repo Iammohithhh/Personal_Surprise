@@ -5,9 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Play, Share2, Heart, Eye, Sparkles, Copy, Check, Link2, X } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import HeartIcon from './HeartIcon';
+import { encodeStoryForShare } from '@/lib/shareUtils';
 
 export default function Preview() {
-  const { generatedStory, setViewMode, resetExperience, shareStory } = useStore();
+  const { generatedStory, setViewMode, resetExperience } = useStore();
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -26,12 +27,9 @@ export default function Preview() {
   };
 
   const handleGenerateShareLink = () => {
-    // Generate or get existing share code
-    let code = generatedStory.shareCode;
-    if (!code) {
-      code = shareStory(generatedStory);
-    }
-    const link = `${window.location.origin}/s/${code}`;
+    // Encode story data directly in URL (no backend needed!)
+    const encoded = encodeStoryForShare(generatedStory);
+    const link = `${window.location.origin}/s/${encoded}`;
     setShareLink(link);
     setShowShareModal(true);
   };
