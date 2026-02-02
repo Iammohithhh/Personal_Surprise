@@ -177,13 +177,13 @@ async function processMemoryWithGroq(
   const prompt = buildPrompt(memory, index, total, creatorName, recipientName, occasionText, recipientType, style);
 
   try {
-    // Shorter timeout per request - 15 seconds
+    // Short timeout per request - 8 seconds (fast model)
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Groq timeout')), 15000);
+      setTimeout(() => reject(new Error('Groq timeout')), 8000);
     });
 
     const completionPromise = groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant', // Much faster model!
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       response_format: { type: 'json_object' },
@@ -245,7 +245,7 @@ async function generateWithGroq(
   const Groq = (await import('groq-sdk')).default;
   const groq = new Groq({
     apiKey: process.env.GROQ_API_KEY,
-    timeout: 20000, // 20 second timeout for SDK
+    timeout: 10000, // 10 second timeout for SDK
   });
 
   // Process memories in parallel batches of 3
@@ -369,16 +369,21 @@ export async function POST(request: Request) {
       return { id: uuidv4(), ...generated, memory };
     });
 
-    // Overall timeout for AI generation - 45 seconds max
-    const OVERALL_TIMEOUT = 45000;
+    // Overall timeout for AI generation - 25 seconds max
+    const OVERALL_TIMEOUT = 25000;
 
     // If style is "none", skip AI and use user's own words
     if (storyStyle === 'none') {
       console.log('Using user notes directly (no AI)...');
       chapters = generateLocalChapters();
     }
-    // For many memories (6+), use faster local generation to avoid timeouts
-    else if (memories.length >= 6 && storyStyle === 'short') {
+    // For many memories (8+), use instant local generation
+    else if (memories.length >= 8) {
+      console.log(`${memories.length} memories - using instant local generation...`);
+      chapters = generateLocalChapters();
+    }
+    // For 5-7 memories, use AI with timeout
+    else if (memories.length >= 5) {
       console.log(`${memories.length} memories detected, using optimized generation...`);
 
       // Try AI with overall timeout, fall back to local if it takes too long
